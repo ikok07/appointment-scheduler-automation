@@ -1,0 +1,13 @@
+[project]
+name = "appointment-scheduler-automation"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi[standard]>=0.117.1",
+    "flask>=3.1.2",
+    "google-api-python-client>=2.183.0",
+    "google-auth>=2.40.3",
+    "google-auth-httplib2>=0.2.0",
+    "google-auth-oauthlib>=1.2.2",
+]

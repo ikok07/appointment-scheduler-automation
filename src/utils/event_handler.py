@@ -30,9 +30,6 @@ def new_event_handler(event_data: dict):
 
         # Define start and end period
         start_period_days_offset = 0
-        event_start_weekday = datetime.fromtimestamp(event_start, tz=pytz.timezone(os.getenv("GOOGLE_CALENDAR_TIMEZONE"))).isoweekday()
-        if event_start_weekday > 4:
-            start_period_days_offset += 8 - event_start_weekday
 
         start_period = ((datetime
                         .fromtimestamp(event_start, tz=pytz.timezone(os.getenv("GOOGLE_CALENDAR_TIMEZONE")))
@@ -40,7 +37,7 @@ def new_event_handler(event_data: dict):
                         .timestamp())
         end_period = ((datetime
                       .fromtimestamp(start_period, tz=pytz.timezone(os.getenv("GOOGLE_CALENDAR_TIMEZONE")))
-                      .replace(hour=int(os.getenv("BOOKING_END_HOUR")), minute=0) + timedelta(days=1))
+                      .replace(hour=int(os.getenv("BOOKING_END_HOUR")), minute=0) + timedelta(days=2))
                       .timestamp())
 
         # Fetch all events for period
@@ -55,8 +52,8 @@ def new_event_handler(event_data: dict):
         # Set the next dates for booking
         appointment_percentages = [float(percentage) for percentage in os.getenv("APPOINTMENT_PERCENTAGES").split(',')]
         next_dates: list[dict] = []
-        first_date_events = [event_in_period for event_in_period in events_in_period if datetime.fromisoformat(event_in_period["start"]["dateTime"]).date() == datetime.fromtimestamp(event_start).date()]
-        previous_max_events_for_date = len(first_date_events) + 1
+        first_date_target_events = [event_in_period for event_in_period in events_in_period if datetime.fromisoformat(event_in_period["start"]["dateTime"]).date() == datetime.fromtimestamp(event_start).date() and "Ден 1" in event_in_period["summary"]]
+        previous_max_events_for_date = len(first_date_target_events)
 
         for i in range(2):
             next_date_start = (datetime.fromtimestamp(start_period) + timedelta(days=i + 1)).timestamp()
@@ -77,6 +74,7 @@ def new_event_handler(event_data: dict):
             # Find available time slot
             original_next_date_start = next_date_start
             next_date_not_suitable = False
+
             for index, event_for_date in enumerate(events_for_date):
                 start = datetime.fromisoformat(event_for_date["start"]["dateTime"]).timestamp()
                 end = datetime.fromisoformat(event_for_date["end"]["dateTime"]).timestamp()

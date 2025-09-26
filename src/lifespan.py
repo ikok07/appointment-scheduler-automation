@@ -16,7 +16,7 @@ async def lifespan(app: FastAPI):
             client = GoogleCalendarClient(calendar_id=calendar_id)
             poller = CalendarPollingManager(
                 google_calendar_client=client,
-                poll_interval=5
+                poll_interval=int(os.getenv("GOOGLE_CALENDAR_POLL_INTERVAL"))
             )
             poller.add_event_handler(new_event_handler)
             poller.start_polling()

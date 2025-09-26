@@ -1,4 +1,3 @@
-import datetime
 import json
 import os
 import threading
@@ -6,8 +5,12 @@ import time
 import uuid
 from threading import Thread
 
+import pytz
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build, Resource
+from datetime import datetime
+
+from src.models.calendar_event import CalendarEventInsert, CalendarEvent
 
 
 class GoogleCalendarClient:
@@ -88,8 +91,8 @@ class GoogleCalendarClient:
         try:
             response = self.calendar_service.events().list(
                 calendarId=self.calendar_id,
-                timeMin=datetime.datetime.fromtimestamp(time_min).isoformat() + "Z" if time_min else None,
-                timeMax=datetime.datetime.fromtimestamp(time_max).isoformat() + "Z" if time_max else None,
+                timeMin=datetime.fromtimestamp(time_min, tz=pytz.timezone(os.getenv("GOOGLE_CALENDAR_TIMEZONE"))).isoformat() if time_min else None,
+                timeMax=datetime.fromtimestamp(time_max, tz=pytz.timezone(os.getenv("GOOGLE_CALENDAR_TIMEZONE"))).isoformat() if time_max else None,
                 singleEvents=True,
                 syncToken=sync_token
             ).execute()
@@ -100,6 +103,37 @@ class GoogleCalendarClient:
             }
         except Exception as e:
             print("Failed to fetch google calendar events!")
+            print(e)
+            raise e
+
+    def check_busy(self, event: CalendarEvent):
+        response = self.calendar_service.freebusy().query(
+            body={
+                "timeMin": event["start"]["dateTime"],
+                "timeMax": event["end"]["dateTime"],
+                "items": [{"id": self.calendar_id}]
+            }
+        ).execute()
+        busy_events = response["calendars"][self.calendar_id]["busy"]
+        event_start = datetime.fromisoformat(event["start"]["dateTime"]).timestamp()
+        event_end = datetime.fromisoformat(event["end"]["dateTime"]).timestamp()
+
+        for busy_event in busy_events:
+            start = datetime.fromisoformat(busy_event["start"]).timestamp()
+            end = datetime.fromisoformat(busy_event["end"]).timestamp()
+            if start == event_start and end == event_end:
+                return True
+
+        return False
+
+    def book_event(self, event: CalendarEventInsert):
+        try:
+            self.calendar_service.events().insert(
+                calendarId=self.calendar_id,
+                body=event
+            ).execute()
+        except Exception as e:
+            print("Failed to create google calendar event!")
             print(e)
             raise e
 

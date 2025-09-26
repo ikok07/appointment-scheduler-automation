@@ -6,9 +6,8 @@ from fastapi import FastAPI
 from src.app_state import app_state
 from src.services.CalendarPollingManager import CalendarPollingManager
 from src.services.google_calendar import GoogleCalendarClient
+from src.utils.event_handler import new_event_handler
 
-def handler(event_data: dict):
-    print(event_data)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -19,7 +18,7 @@ async def lifespan(app: FastAPI):
                 google_calendar_client=client,
                 poll_interval=5
             )
-            poller.add_event_handler(handler)
+            poller.add_event_handler(new_event_handler)
             poller.start_polling()
             app_state.google_calendar_clients.append(
                 client

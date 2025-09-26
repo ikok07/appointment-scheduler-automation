@@ -1,3 +1,4 @@
+import os
 import queue
 import threading
 import time
@@ -100,11 +101,16 @@ class CalendarPollingManager:
             print(f"Error polling calendar: {e}")
 
     def _read_sync_token(self):
-        with open(self.sync_token_path, "r") as file:
-            content = file.read().strip()
+        try:
+            with open(self.sync_token_path, "r") as file:
+                content = file.read().strip()
             return content if content else None
+        except FileNotFoundError:
+            return None
 
     def _save_sync_token(self, sync_token: str):
+        os.makedirs(os.path.dirname(self.sync_token_path), exist_ok=True)
+
         with open(self.sync_token_path, "w") as file:
             file.write(sync_token)
             self.last_sync_token = sync_token

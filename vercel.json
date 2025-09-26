@@ -4,9 +4,6 @@
     {
       "src": "src/main.py",
       "use": "@vercel/python",
-      "config": {
-        "excludeFiles": "**/.venv/**, **/.env, **/uv.lock, **/__pycache__/**, **/pyproject.toml"
-      }
     }
   ],
   "routes": [
@@ -14,5 +11,6 @@
       "src": "/(.*)",
       "dest": "src/main.py"
     }
-  ]
+  ],
+  "buildCommand": "python3 -m pip install uv && python3 -m  uv pip install . --target /build"
 }

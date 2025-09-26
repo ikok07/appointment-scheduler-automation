@@ -30,3 +30,7 @@ async def generic_error_handler(req: Request, err: Exception):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"error": str(err)}
     )
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

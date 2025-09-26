@@ -19,7 +19,7 @@ def new_event_handler(event_data: dict):
 
     calendar_client.unify_event_start_stop_dates(new_events)
 
-    for event in new_events:
+    for event_index, event in enumerate(new_events):
         event_start = datetime.fromisoformat(event["start"]["dateTime"]) if event["start"]["dateTime"] else datetime.fromisoformat(event["start"]["date"])
         event_end = datetime.fromisoformat(event["end"]["dateTime"]) if event["end"]["dateTime"] else datetime.fromisoformat(event["end"]["date"])
 
@@ -53,7 +53,7 @@ def new_event_handler(event_data: dict):
         appointment_percentages = [float(percentage) for percentage in os.getenv("APPOINTMENT_PERCENTAGES").split(',')]
         next_dates: list[dict] = []
         first_date_target_events = [event_in_period for event_in_period in events_in_period if datetime.fromisoformat(event_in_period["start"]["dateTime"]).date() == datetime.fromtimestamp(event_start).date() and "Ден 1" in event_in_period["summary"]]
-        previous_max_events_for_date = len(first_date_target_events)
+        previous_max_events_for_date = len(first_date_target_events) - (len(new_events) - 1 - event_index)
 
         for i in range(2):
             next_date_start = (datetime.fromtimestamp(start_period) + timedelta(days=i + 1)).timestamp()

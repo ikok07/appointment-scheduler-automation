@@ -1,3 +1,4 @@
+import math
 import os
 from datetime import datetime, timezone, timedelta
 
@@ -28,10 +29,10 @@ def new_event_handler(event_data: dict):
         event_duration_seconds = event_end - event_start
 
         # Define start and end period
-        start_period_days_offset = 1
+        start_period_days_offset = 0
         event_start_weekday = datetime.fromtimestamp(event_start, tz=pytz.timezone(os.getenv("GOOGLE_CALENDAR_TIMEZONE"))).isoweekday()
         if event_start_weekday > 4:
-            start_period_days_offset += 7 - event_start_weekday
+            start_period_days_offset += 8 - event_start_weekday
 
         start_period = ((datetime
                         .fromtimestamp(event_start, tz=pytz.timezone(os.getenv("GOOGLE_CALENDAR_TIMEZONE")))
@@ -54,12 +55,15 @@ def new_event_handler(event_data: dict):
         # Set the next dates for booking
         appointment_percentages = [float(percentage) for percentage in os.getenv("APPOINTMENT_PERCENTAGES").split(',')]
         next_dates: list[dict] = []
-        previous_max_events_for_date = int(os.getenv("DAY1_MAX_APPOINTMENTS"))
+        first_date_events = [event_in_period for event_in_period in events_in_period if datetime.fromisoformat(event_in_period["start"]["dateTime"]).date() == datetime.fromtimestamp(event_start).date()]
+        previous_max_events_for_date = len(first_date_events) + 1
+
         for i in range(2):
-            next_date_start = (datetime.fromtimestamp(start_period) + timedelta(days=i)).timestamp()
+            next_date_start = (datetime.fromtimestamp(start_period) + timedelta(days=i + 1)).timestamp()
             next_date_end = (datetime.fromtimestamp(next_date_start) + timedelta(seconds=event_duration_seconds)).timestamp()
 
-            max_events_for_date = appointment_percentages[i] * previous_max_events_for_date
+            max_events_for_date = math.ceil(appointment_percentages[i] * previous_max_events_for_date)
+            print(appointment_percentages[i], previous_max_events_for_date, max_events_for_date)
             previous_max_events_for_date = max_events_for_date
 
             events_for_date = [event for event in events_in_period if datetime.fromisoformat(event["start"]["dateTime"]).date() == datetime.fromtimestamp(next_date_start).date()]

@@ -20,7 +20,8 @@ class CalendarPollingManager:
         self.handled_event_ids: list[str] = []
         self.sync_token_path = os.path.join(os.getcwd(), "sync_token.txt")
 
-        self.last_sync_token = self._read_sync_token()
+        # self.last_sync_token = self._read_sync_token()
+        self.last_sync_token = None
 
     def add_event_handler(self, callback_func: Callable):
         self.event_callbacks.append(callback_func)

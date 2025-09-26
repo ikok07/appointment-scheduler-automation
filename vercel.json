@@ -3,7 +3,10 @@
   "builds": [
     {
       "src": "src/main.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "excludeFiles": "**/.venv/**, **/.env, **/uv.lock, **/__pycache__/**, **/pyproject.toml"
+      }
     }
   ],
   "routes": [

@@ -16,6 +16,8 @@ def new_event_handler(event_data: dict):
     if len(new_events) > 0:
         print(f"AUTOMATIZATION STARTED FOR CALENDAR ID: {calendar_client.calendar_id}")
 
+    calendar_client.unify_event_start_stop_dates(new_events)
+
     for event in new_events:
         event_start = datetime.fromisoformat(event["start"]["dateTime"]) if event["start"]["dateTime"] else datetime.fromisoformat(event["start"]["date"])
         event_end = datetime.fromisoformat(event["end"]["dateTime"]) if event["end"]["dateTime"] else datetime.fromisoformat(event["end"]["date"])
@@ -47,20 +49,30 @@ def new_event_handler(event_data: dict):
         )["items"]
         events_in_period = [event_in_period for event_in_period in events_in_period if calendar_client.check_busy(event_in_period)]
 
+        calendar_client.unify_event_start_stop_dates(events_in_period)
+
         # Set the next dates for booking
         appointment_percentages = [float(percentage) for percentage in os.getenv("APPOINTMENT_PERCENTAGES").split(',')]
         next_dates: list[dict] = []
+        previous_max_events_for_date = int(os.getenv("DAY1_MAX_APPOINTMENTS"))
         for i in range(2):
             next_date_start = (datetime.fromtimestamp(start_period) + timedelta(days=i)).timestamp()
             next_date_end = (datetime.fromtimestamp(next_date_start) + timedelta(seconds=event_duration_seconds)).timestamp()
-            max_events_for_date = appointment_percentages[i] * int(os.getenv("DAY1_MAX_APPOINTMENTS"))
+
+            max_events_for_date = appointment_percentages[i] * previous_max_events_for_date
+            previous_max_events_for_date = max_events_for_date
+
             events_for_date = [event for event in events_in_period if datetime.fromisoformat(event["start"]["dateTime"]).date() == datetime.fromtimestamp(next_date_start).date()]
 
+            target_event_for_date = [event for event in events_in_period if f"Ден {i + 2}" in event["summary"]]
+
             # If max events reached - break
-            if len(events_for_date) >= max_events_for_date:
+            if len(target_event_for_date) >= max_events_for_date:
                 break
 
             # Find available time slot
+            original_next_date_start = next_date_start
+            next_date_not_suitable = False
             for index, event_for_date in enumerate(events_for_date):
                 start = datetime.fromisoformat(event_for_date["start"]["dateTime"]).timestamp()
                 end = datetime.fromisoformat(event_for_date["end"]["dateTime"]).timestamp()
@@ -74,8 +86,13 @@ def new_event_handler(event_data: dict):
                 if overlaps:
                     next_date_start = end
                     next_date_end = (datetime.fromtimestamp(next_date_start) + timedelta(seconds=event_duration_seconds)).timestamp()
+                    # Check if the next date gets out of the max booking time for the day
+                    if datetime.fromtimestamp(next_date_end) > datetime.fromtimestamp(original_next_date_start).replace(hour=int(os.getenv("BOOKING_END_HOUR"))):
+                        next_date_not_suitable = True
+                        break
 
-            next_dates.append({"start": next_date_start, "end": next_date_end})
+            if not next_date_not_suitable:
+                next_dates.append({"start": next_date_start, "end": next_date_end})
 
         # Book next dates
         for index, next_date in enumerate(next_dates):

@@ -1,5 +1,6 @@
 import queue
 import threading
+import time
 from datetime import datetime
 from threading import Thread
 from typing import Callable
@@ -15,8 +16,10 @@ class CalendarPollingManager:
         self.stop_event = threading.Event()
         self.event_queue = queue.Queue()
         self.event_callbacks: list[Callable] = []
-        self.last_sync_token: str | None = None
         self.handled_event_ids: list[str] = []
+        self.sync_token_path = "sync_token.txt"
+
+        self.last_sync_token = self._read_sync_token()
 
     def add_event_handler(self, callback_func: Callable):
         self.event_callbacks.append(callback_func)
@@ -71,15 +74,37 @@ class CalendarPollingManager:
     def _poll_for_changes(self):
         try:
             if self.last_sync_token:
-                return self.calendar_client.fetch_events(
+                response = self.calendar_client.fetch_events(
                     sync_token=self.last_sync_token
-                )["items"]
+                )
+
+                while response["nextPageToken"] is not None and response["syncToken"] is None:
+                    response = self.calendar_client.fetch_events(time_min=time.time(), next_page_token=response["nextPageToken"])
+
+                if response["syncToken"] is not None:
+                    self._save_sync_token(response["syncToken"])
+
+                return response["items"]
             else:
                 # Initial events won't be handled
-                response = self.calendar_client.fetch_events()
-                self.last_sync_token = response["syncToken"]
+                print("Scrolling through pages until sync token is returned....")
+                response = self.calendar_client.fetch_events(time_min=time.time())
+                while response["nextPageToken"] is not None and response["syncToken"] is None:
+                    response = self.calendar_client.fetch_events(time_min=time.time(), next_page_token=response["nextPageToken"])
+
+                if response["syncToken"] is not None:
+                    self._save_sync_token(response["syncToken"])
+
                 return []
-
-
         except Exception as e:
             print(f"Error polling calendar: {e}")
+
+    def _read_sync_token(self):
+        with open(self.sync_token_path, "r") as file:
+            content = file.read().strip()
+            return content if content else None
+
+    def _save_sync_token(self, sync_token: str):
+        with open(self.sync_token_path, "w") as file:
+            file.write(sync_token)
+            self.last_sync_token = sync_token

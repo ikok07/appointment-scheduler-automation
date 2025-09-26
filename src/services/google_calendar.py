@@ -84,7 +84,7 @@ class GoogleCalendarClient:
         self.close_watch_channel()
         self.watch_calendar()
 
-    def fetch_events(self, time_min: float | None = None, time_max: float | None = None, sync_token: str | None = None):
+    def fetch_events(self, time_min: float | None = None, time_max: float | None = None, sync_token: str | None = None, next_page_token: str | None = None):
         if not self.calendar_service:
             raise Exception("No calendar service available!")
 
@@ -94,12 +94,14 @@ class GoogleCalendarClient:
                 timeMin=datetime.fromtimestamp(time_min, tz=pytz.timezone(os.getenv("GOOGLE_CALENDAR_TIMEZONE"))).isoformat() if time_min else None,
                 timeMax=datetime.fromtimestamp(time_max, tz=pytz.timezone(os.getenv("GOOGLE_CALENDAR_TIMEZONE"))).isoformat() if time_max else None,
                 singleEvents=True,
-                syncToken=sync_token
+                syncToken=sync_token,
+                pageToken=next_page_token
             ).execute()
 
             return {
                 "items": response["items"] if "items" in response else [],
-                "syncToken": response["nextSyncToken"] if "nextSyncToken" in response else None
+                "syncToken": response["nextSyncToken"] if "nextSyncToken" in response else None,
+                "nextPageToken": response["nextPageToken"] if "nextPageToken" in response else None
             }
         except Exception as e:
             print("Failed to fetch google calendar events!")
@@ -107,16 +109,23 @@ class GoogleCalendarClient:
             raise e
 
     def check_busy(self, event: CalendarEvent):
+        if ("date" in event["start"] and event["start"]["date"] is not None) or ("date" in event["end"] and event["end"]["date"] is not None):
+            return True
+
+        event_start_str = event["start"]["dateTime"]
+        event_end_str = event["end"]["dateTime"]
+
         response = self.calendar_service.freebusy().query(
             body={
-                "timeMin": event["start"]["dateTime"],
-                "timeMax": event["end"]["dateTime"],
+                "timeMin": event_start_str,
+                "timeMax": event_end_str,
                 "items": [{"id": self.calendar_id}]
             }
         ).execute()
         busy_events = response["calendars"][self.calendar_id]["busy"]
-        event_start = datetime.fromisoformat(event["start"]["dateTime"]).timestamp()
-        event_end = datetime.fromisoformat(event["end"]["dateTime"]).timestamp()
+
+        event_start = datetime.fromisoformat(event_start_str).timestamp()
+        event_end = datetime.fromisoformat(event_end_str).timestamp()
 
         for busy_event in busy_events:
             start = datetime.fromisoformat(busy_event["start"]).timestamp()
@@ -136,6 +145,14 @@ class GoogleCalendarClient:
             print("Failed to create google calendar event!")
             print(e)
             raise e
+
+    def unify_event_start_stop_dates(self, events: list[CalendarEvent]):
+        for event in events:
+            if "date" in event["start"]:
+                event["start"]["dateTime"] = datetime.fromisoformat(event["start"]["date"]).isoformat()
+            if "date" in event["end"]:
+                event["end"]["dateTime"] = datetime.fromisoformat(event["end"]["date"]).isoformat()
+        return events
 
     def _schedule_renewal(self):
         now_ms = int(time.time() * 1000)

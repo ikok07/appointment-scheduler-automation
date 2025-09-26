@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from src.app_state import app_state
-from src.services.CalendarPollingManager import CalendarPollingManager
+from src.services.calendar_polling_manager import CalendarPollingManager
 from src.services.google_calendar import GoogleCalendarClient
 from src.utils.event_handler import new_event_handler
 

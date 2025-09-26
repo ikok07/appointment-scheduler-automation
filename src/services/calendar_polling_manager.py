@@ -18,7 +18,7 @@ class CalendarPollingManager:
         self.event_queue = queue.Queue()
         self.event_callbacks: list[Callable] = []
         self.handled_event_ids: list[str] = []
-        self.sync_token_path = "sync_token.txt"
+        self.sync_token_path = os.path.join(os.getcwd(), "sync_token.txt")
 
         self.last_sync_token = self._read_sync_token()
 
@@ -96,6 +96,7 @@ class CalendarPollingManager:
                 if response["syncToken"] is not None:
                     self._save_sync_token(response["syncToken"])
 
+                print("Scrolling finished!")
                 return []
         except Exception as e:
             print(f"Error polling calendar: {e}")

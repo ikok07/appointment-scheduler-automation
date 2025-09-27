@@ -55,6 +55,7 @@ def new_event_handler(event_data: dict):
         first_date_target_events = [event_in_period for event_in_period in events_in_period if datetime.fromisoformat(event_in_period["start"]["dateTime"]).date() == datetime.fromtimestamp(event_start).date() and "Ден 1" in event_in_period["summary"]]
         previous_max_events_for_date = len(first_date_target_events) - (len(new_events) - 1 - event_index)
 
+
         for i in range(2):
             next_date_start = (datetime.fromtimestamp(start_period) + timedelta(days=i + 1)).timestamp()
             next_date_end = (datetime.fromtimestamp(next_date_start) + timedelta(seconds=event_duration_seconds)).timestamp()
@@ -75,23 +76,33 @@ def new_event_handler(event_data: dict):
             original_next_date_start = next_date_start
             next_date_not_suitable = False
 
-            for index, event_for_date in enumerate(events_for_date):
-                start = datetime.fromisoformat(event_for_date["start"]["dateTime"]).timestamp()
-                end = datetime.fromisoformat(event_for_date["end"]["dateTime"]).timestamp()
-                overlaps = check_overlap(
-                    next_date_start,
-                    next_date_end,
-                    start,
-                    end
-                )
+            while not next_date_not_suitable:
+                overlap_found = False
+                for index, event_for_date in enumerate(events_for_date):
+                    start = datetime.fromisoformat(event_for_date["start"]["dateTime"]).timestamp()
+                    end = datetime.fromisoformat(event_for_date["end"]["dateTime"]).timestamp()
 
-                if overlaps:
-                    next_date_start = end
-                    next_date_end = (datetime.fromtimestamp(next_date_start) + timedelta(seconds=event_duration_seconds)).timestamp()
-                    # Check if the next date gets out of the max booking time for the day
-                    if datetime.fromtimestamp(next_date_end) > datetime.fromtimestamp(original_next_date_start).replace(hour=int(os.getenv("BOOKING_END_HOUR"))):
-                        next_date_not_suitable = True
+                    if end <= next_date_start:
+                        continue
+
+                    overlaps = check_overlap(
+                        next_date_start,
+                        next_date_end,
+                        start,
+                        end
+                    )
+
+                    if overlaps:
+                        next_date_start = end
+                        next_date_end = (datetime.fromtimestamp(next_date_start) + timedelta(seconds=event_duration_seconds)).timestamp()
+                        # Check if the next date gets out of the max booking time for the day
+                        if datetime.fromtimestamp(next_date_end) > datetime.fromtimestamp(original_next_date_start).replace(hour=int(os.getenv("BOOKING_END_HOUR"))):
+                            next_date_not_suitable = True
+
+                        overlap_found = True
                         break
+                if not overlap_found:
+                    break
 
             if not next_date_not_suitable:
                 next_dates.append({"start": next_date_start, "end": next_date_end})

@@ -12,7 +12,7 @@ def check_overlap(d1_start: float, d1_end: float, d2_start: float, d2_end: float
 
 def new_event_handler(event_data: dict):
     calendar_client: GoogleCalendarClient = event_data["calendar_client"]
-    new_events: list[CalendarEvent] = [CalendarEvent(**event) for event in event_data["events"] if "Ден 1" in event["summary"]]
+    new_events: list[CalendarEvent] = [CalendarEvent(**event) for event in event_data["events"] if any(trigger in event["summary"] for trigger in ["Ден 1", "Ден1", "ден 1", "ден1"]) ]
 
     if len(new_events) > 0:
         print(f"AUTOMATIZATION STARTED FOR CALENDAR ID: {calendar_client.calendar_id}")

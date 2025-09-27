@@ -121,5 +121,6 @@ def new_event_handler(event_data: dict):
                     dateTime=datetime.fromtimestamp(next_date["end"], tz=pytz.timezone(os.getenv("GOOGLE_CALENDAR_TIMEZONE"))).isoformat(),
                     date=None,
                     timeZone=os.getenv("GOOGLE_CALENDAR_TIMEZONE")
-                )
+                ),
+                colorId="11" # Red
             ))

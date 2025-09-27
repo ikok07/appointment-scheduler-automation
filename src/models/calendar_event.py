@@ -19,3 +19,4 @@ class CalendarEventInsert(TypedDict):
     description: Optional[str]
     start: CalendarEventStartStop
     end: CalendarEventStartStop
+    colorId: Optional[str]

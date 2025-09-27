@@ -17,7 +17,7 @@ def new_event_handler(event_data: dict):
     if len(new_events) > 0:
         print(f"AUTOMATIZATION STARTED FOR CALENDAR ID: {calendar_client.calendar_id}")
 
-    calendar_client.unify_event_start_stop_dates(new_events)
+    new_events = calendar_client.filter_whole_day_events(new_events)
 
     for event_index, event in enumerate(new_events):
         event_start = datetime.fromisoformat(event["start"]["dateTime"]) if event["start"]["dateTime"] else datetime.fromisoformat(event["start"]["date"])
@@ -47,7 +47,7 @@ def new_event_handler(event_data: dict):
         )["items"]
         events_in_period = [event_in_period for event_in_period in events_in_period if calendar_client.check_busy(event_in_period)]
 
-        calendar_client.unify_event_start_stop_dates(events_in_period)
+        events_in_period = calendar_client.filter_whole_day_events(events_in_period)
 
         # Set the next dates for booking
         appointment_percentages = [float(percentage) for percentage in os.getenv("APPOINTMENT_PERCENTAGES").split(',')]
@@ -97,20 +97,21 @@ def new_event_handler(event_data: dict):
                         next_date_end = (datetime.fromtimestamp(next_date_start) + timedelta(seconds=event_duration_seconds)).timestamp()
                         # Check if the next date gets out of the max booking time for the day
                         if datetime.fromtimestamp(next_date_end) > datetime.fromtimestamp(original_next_date_start).replace(hour=int(os.getenv("BOOKING_END_HOUR"))):
+                            print(f"NEXT DATE END HAS PASSED THE END HOUR FOR THE DAY: {datetime.fromtimestamp(next_date_end)}")
                             next_date_not_suitable = True
 
                         overlap_found = True
                         break
-                if not overlap_found:
+                if not overlap_found or next_date_not_suitable:
                     break
 
             if not next_date_not_suitable:
-                next_dates.append({"start": next_date_start, "end": next_date_end})
+                next_dates.append({"start": next_date_start, "end": next_date_end, "index": i})
 
         # Book next dates
-        for index, next_date in enumerate(next_dates):
+        for next_date in next_dates:
             calendar_client.book_event(CalendarEventInsert(
-                summary=f"Ден {index + 2}",
+                summary=f"Ден {next_date["index"] + 2}",
                 start=CalendarEventStartStop(
                     dateTime=datetime.fromtimestamp(next_date["start"], tz=pytz.timezone(os.getenv("GOOGLE_CALENDAR_TIMEZONE"))).isoformat(),
                     date=None,

@@ -146,12 +146,8 @@ class GoogleCalendarClient:
             print(e)
             raise e
 
-    def unify_event_start_stop_dates(self, events: list[CalendarEvent]):
-        for event in events:
-            if "date" in event["start"]:
-                event["start"]["dateTime"] = datetime.fromisoformat(event["start"]["date"]).isoformat()
-            if "date" in event["end"]:
-                event["end"]["dateTime"] = datetime.fromisoformat(event["end"]["date"]).isoformat()
+    def filter_whole_day_events(self, events: list[CalendarEvent]):
+        events = [event for event in events if "dateTime" in event["start"] and "dateTime" in event["end"]]
         return events
 
     def _schedule_renewal(self):

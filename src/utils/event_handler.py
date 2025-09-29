@@ -26,7 +26,6 @@ def new_event_handler(event_data: dict):
         # Convert to timestamps
         event_start = event_start.timestamp()
         event_end = event_end.timestamp()
-        event_duration_seconds = event_end - event_start
 
         # Define start and end period
         start_period_days_offset = 0
@@ -58,7 +57,7 @@ def new_event_handler(event_data: dict):
 
         for i in range(2):
             next_date_start = (datetime.fromtimestamp(start_period) + timedelta(days=i + 1)).timestamp()
-            next_date_end = (datetime.fromtimestamp(next_date_start) + timedelta(seconds=event_duration_seconds)).timestamp()
+            next_date_end = (datetime.fromtimestamp(next_date_start) + timedelta(hours=1)).timestamp()
 
             max_events_for_date = math.ceil(appointment_percentages[i] * previous_max_events_for_date)
             print(appointment_percentages[i], previous_max_events_for_date, max_events_for_date)
@@ -94,7 +93,7 @@ def new_event_handler(event_data: dict):
 
                     if overlaps:
                         next_date_start = end
-                        next_date_end = (datetime.fromtimestamp(next_date_start) + timedelta(seconds=event_duration_seconds)).timestamp()
+                        next_date_end = (datetime.fromtimestamp(next_date_start) + timedelta(hours=1)).timestamp()
                         # Check if the next date gets out of the max booking time for the day
                         if datetime.fromtimestamp(next_date_end) > datetime.fromtimestamp(original_next_date_start).replace(hour=int(os.getenv("BOOKING_END_HOUR"))):
                             print(f"NEXT DATE END HAS PASSED THE END HOUR FOR THE DAY: {datetime.fromtimestamp(next_date_end)}")
